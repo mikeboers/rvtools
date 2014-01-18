@@ -34,7 +34,8 @@ class FileSequence(object):
             raise ValueError('bad start/end/duration combo')
 
         self.glob = '%s*%s' % (self.expr[:m.start()], self.expr[m.end():])
-
+        self.rv_pattern = '%s#%s' % (self.expr[:m.start()], self.expr[m.end():])
+        
         self.fullname = os.path.basename(self.expr).split('.')[0]
         self.name, self.eye = parse_eye(self.fullname)
 
