@@ -11,6 +11,8 @@ def parse_eye(name, default=None):
 
 
 class FileSequence(object):
+    
+    """One line of ld_tree.py output."""
 
     # /Volumes/k2r3/vfx_submissions/dpx3/TB_0780_V0012_MONO/2156x1804/tb_0780_v0012_mono.[1008-1160].dpx (153)
 
@@ -18,26 +20,30 @@ class FileSequence(object):
 
         m = re.match(r'^(.+) \((\d+)\)$', line)
         if not m:
-            raise ValueError('no frame count')
+            self.start = self.end = self.frame_count = None
+            self.expr = self.glob = self.rv_pattern = line
 
-        self.expr, frame_count = m.groups()
-        self.frame_count = int(frame_count)
+        else:
 
-        m = re.search(r'\[(\d+)-(\d+)\]', self.expr)
-        if not m:
-            raise ValueError('no frame range')
-        start, end = m.groups()
-        self.start = int(start)
-        self.end = int(end)
+            self.expr, frame_count = m.groups()
+            self.frame_count = int(frame_count)
 
-        if (self.end - self.start) + 1 != self.frame_count:
-            raise ValueError('bad start/end/duration combo')
+            m = re.search(r'\[(\d+)-(\d+)\]', self.expr)
+            if not m:
+                raise ValueError('cannot find sequence')
 
-        self.glob = '%s*%s' % (self.expr[:m.start()], self.expr[m.end():])
-        self.rv_pattern = '%s#%s' % (self.expr[:m.start()], self.expr[m.end():])
+            start, end = m.groups()
+            self.start = int(start)
+            self.end = int(end)
+
+            if (self.end - self.start) + 1 != self.frame_count:
+                raise ValueError('bad start/end/duration combo')
+
+            self.glob = '%s*%s' % (self.expr[:m.start()], self.expr[m.end():])
+            self.rv_pattern = '%s#%s' % (self.expr[:m.start()], self.expr[m.end():])
         
-        self.fullname = os.path.basename(self.expr).split('.')[0]
-        self.name, self.eye = parse_eye(self.fullname)
+        self.full_name = os.path.basename(self.expr).split('.')[0]
+        self.name, self.eye = parse_eye(self.full_name)
 
 
 def parse_ld_tree_output(fh):
