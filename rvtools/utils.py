@@ -2,12 +2,26 @@ import os
 import re
 
 
-def parse_eye(name, default=None):
-    m = re.match(r'(.+)_(mono|left|right)', name, re.I)
-    if m:
-        return m.groups()
-    else:
-        return name, default
+flag_types = {
+    'mono': 'eye',
+    'left': 'eye',
+    'right': 'eye',
+    'n': 'grade',
+}
+
+
+def split_flags(name):
+
+    flags = {}
+
+    flags_re = r'^(.+?)((?:_(?:%s))*)$' % '|'.join(flag_types)
+    m = re.match(flags_re, name, re.I)
+
+    for flag in m.group(2).strip('_').split('_'):
+        if flag:
+            flags[flag_types[flag]] = flag
+
+    return m.group(1), flags
 
 
 class FileSequence(object):
@@ -21,7 +35,8 @@ class FileSequence(object):
         m = re.match(r'^(.+) \((\d+)\)$', line)
         if not m:
             self.start = self.end = self.frame_count = None
-            self.expr = self.glob = self.rv_pattern = line
+            self.expr = self.pattern = line
+            self.suffix = os.path.splitext(self.expr)[1]
 
         else:
 
@@ -39,11 +54,27 @@ class FileSequence(object):
             if (self.end - self.start) + 1 != self.frame_count:
                 raise ValueError('bad start/end/duration combo')
 
-            self.glob = '%s*%s' % (self.expr[:m.start()], self.expr[m.end():])
-            self.rv_pattern = '%s#%s' % (self.expr[:m.start()], self.expr[m.end():])
+            self.prefix = self.expr[:m.start()]
+            self.suffix = self.expr[m.end():]
+            self.pattern = '%s{}%s' % (self.prefix, self.suffix)
         
         self.full_name = os.path.basename(self.expr).split('.')[0]
-        self.name, self.eye = parse_eye(self.full_name)
+        self.name, self.flags = split_flags(self.full_name)
+
+    @property
+    def eye(self):
+        return self.flags.get('eye')
+
+    @property
+    def grade(self):
+        return self.flags.get('grade')
+
+    @property
+    def first_frame(self):
+        if self.start:
+            return self.pattern.format(self.start)
+        else:
+            return self.expr
 
 
 def parse_ld_tree_output(fh):
