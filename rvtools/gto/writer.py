@@ -68,7 +68,7 @@ class Writer(object):
         if type is None:
             sizes = []
             to_type = value
-            while isinstance(to_type, (list, tuple)):
+            while isinstance(to_type, (list, tuple)) and to_type:
                 sizes.insert(0, len(to_type))
                 to_type = to_type[0]
             sizes = sizes[:-1] # ignore the final size
