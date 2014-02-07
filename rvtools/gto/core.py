@@ -59,6 +59,38 @@ def filter_tokens(tokens):
             yield token
 
 
+def gto_repr(value, ident=False):
+
+    if isinstance(value, basestring):
+        escaped = value.encode('string-escape')
+        if ident and value == escaped and not re.search(r'\s+', value):
+            return value
+        return '"%s"' % escaped
+
+    elif isinstance(value, (tuple, list)):
+        return '[ %s ]' % ' '.join(gto_repr(x) for x in value)
+
+    else:
+        return str(value)
+
+
+def gto_type(value, base=None):
+    sizes = []
+    to_type = value
+    while isinstance(to_type, (list, tuple)) and to_type:
+        sizes.insert(0, len(to_type))
+        to_type = to_type[0]
+    sizes = sizes[:-1] # ignore the final size
+
+    base = base or str(to_type.__class__.__name__)
+    base = {'str': 'string'}.get(base, base)
+
+    if sizes:
+        return '%s[%s]' % (base, ','.join(str(x) for x in sizes))
+    else:
+        return base
+
+
 class Object(object):
 
     def __init__(self, name, protocol='object', version=0):
@@ -72,9 +104,9 @@ class Object(object):
 
     def iter_dumps(self, indent=''):
         yield indent
-        yield self.name
+        yield gto_repr(self.name, True)
         if self.protocol != 'object':
-            yield ' : ' + self.protocol
+            yield ' : ' + gto_repr(self.protocol, True)
         if self.version:
             yield ' (%d)' % self.version
         if self.children:
@@ -97,9 +129,10 @@ class Component(object):
 
     def iter_dumps(self, indent=''):
         yield indent
-        yield self.name
+        yield gto_repr(self.name, True)
         if self.interpretation:
-            yield ' as ' + self.interpretation
+            yield ' as '
+            yield gto_repr(self.interpretation, True)
         yield ' {\n'
         for name, child in sorted(self.children.iteritems()):
             for x in child.iter_dumps(indent + '    '):
@@ -116,7 +149,13 @@ class Property(object):
         self.interpretation = interpretation
 
     def iter_dumps(self, indent=''):
-        yield '%s%s %s = %r\n' % (indent, self.type, self.name, self.value)
+        yield indent
+        yield gto_type(self.value, self.type)
+        yield ' '
+        yield gto_repr(self.name, True)
+        yield ' = '
+        yield gto_repr(self.value)
+        yield '\n'
 
 
 class GTO(object):
@@ -127,7 +166,7 @@ class GTO(object):
 
     def iter_dumps(self):
         if self.version:
-            yield 'GTOa (%d)' % self.version
+            yield 'GTOa (%d)\n' % self.version
         for k, v in sorted(self.children.iteritems()):
             for x in v.iter_dumps():
                 yield x

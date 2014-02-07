@@ -1,14 +1,6 @@
 import contextlib
 
-
-def gto_repr(value):
-
-    if isinstance(value, basestring):
-        return '"%s"' % value
-    elif isinstance(value, (tuple, list)):
-        return '[ %s ]' % ' '.join(gto_repr(x) for x in value)
-    else:
-        return str(value)
+from .core import gto_repr, gto_type
 
 
 class Writer(object):
@@ -65,22 +57,7 @@ class Writer(object):
 
     def property(self, name, value, type=None, basetype=None, interpretation=None):
 
-        if type is None:
-            sizes = []
-            to_type = value
-            while isinstance(to_type, (list, tuple)) and to_type:
-                sizes.insert(0, len(to_type))
-                to_type = to_type[0]
-            sizes = sizes[:-1] # ignore the final size
-
-            basetype = basetype or str(to_type.__class__.__name__)
-            basetype = {'str': 'string'}.get(basetype, basetype)
-
-            if sizes:
-                type = '%s[%s]' % (basetype, ','.join(str(x) for x in sizes))
-            else:
-                type = basetype
-
+        type = type or gto_type(value, basetype)
         if interpretation:
             line = '%s %s as %s = %s' % (type, gto_repr(name), interpretation, gto_repr(value))
         else:
