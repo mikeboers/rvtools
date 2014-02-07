@@ -1,56 +1,89 @@
+import collections
 import re
+
+
+from .core import Object, Component, Property
 
 
 rules = [
     (r'(\s+)', 'SPACE' , lambda s: s),
-    (r'(\w+)', 'WORD' , lambda s: s),
+    (r'([+-]?\d*(?:\d\.|\.\d)\d*)' , 'FLOAT' , lambda s: float(s)),
+    (r'([+-]?\d+)', 'INTEGER' , lambda s: int(s)), # must be after FLOAT
+    (r'(\w+)', 'WORD' , lambda s: s), # must be after INTEGER
     (r'(?:#|//)([^\n\r]*)'  , 'COMMENT', lambda s: s),
     (r'(\()', 'OPEN_PAREN', lambda s: s),
     (r'(\))', 'CLOSE_PAREN', lambda s: s),
     (r'({)', 'OPEN_BRACE', lambda s: s),
     (r'(})', 'CLOSE_BRACE', lambda s: s),
+    (r'(\[)', 'OPEN_BRACKET', lambda s: s),
+    (r'(\])', 'CLOSE_BRACKET', lambda s: s),
     (r'(:)', 'COLON', lambda s: s),
     (r'(=)', 'EQUALS', lambda s: s),
     (r'"((?:[^"]*(?:\\")?)*)"', 'STRING', lambda s: s.decode('string-escape')),
     (r"'((?:[^']*(?:\\')?)*)'", 'STRING', lambda s: s.decode('string-escape')),
-    (r'([+-]?\d*(\d\.?|\d?\.)\d*)' , 'FLOAT' , lambda s: float(s)),
 ]
 
 rules = [(re.compile(p), t, f) for p, t, f in rules]
 
 
+_Token = collections.namedtuple('Token', 'type value line column')
+class Token(_Token):
+    def __str__(self):
+        return '<%s %r at %d:%d>' % self
+
+
+class ParseError(ValueError):
+
+    def __init__(self, msg, token=None):
+        if token:
+            msg = '%s at line %s, column %s' % (msg, token.line, token.column)
+        super(ParseError, self).__init__(msg)
+        self.token = token
+
+
 def iter_tokens(source):
+    for line_no, line in enumerate(source):
+        start = 0
+        while start < len(line):
+            for pattern, type_, func in rules:
+                m = pattern.match(line, start)
+                if m:
+                    value = func(*m.groups())
+                    yield Token(type_, value, line_no + 1, start)
+                    start = m.end(0)
+                    break
+            else:
+                raise ValueError('cannot tokenize past line %d, column %d; %s' % (line_no + 1, start, line[start:]))
 
-    start = 0
-    while start < len(source):
-        for pattern, type_, func in rules:
-            m = pattern.match(source, start)
-            if m:
-                token = func(*m.groups())
-                yield (type_, token)
-                start = m.end(0)
-                break
-        else:
-            raise ValueError('cannot parse past %d: %r' % (start, source[start:]))
 
+def filter_tokens(tokens):
+    for token in tokens:
+        if token.type not in ('SPACE', 'COMMENT'):
+            yield token
 
 
 class Reader(object):
 
     def __init__(self):
         self.buffer = []
+        self.children = {}
 
-    def filter_tokens(self, tokens):
-        for type_, value in tokens:
-            if type_ not in ('SPACE', 'COMMENT'):
-                yield type_, value
-        yield ('EOF', None)
+    def pprint(self):
+        if self.version:
+            print 'GTOa (%d)' % self.version
+        for k, v in sorted(self.children.iteritems()):
+            v.pprint()
 
     def parse(self, source):
-        self.token_iter = self.filter_tokens(iter_tokens(source))
+        self.token_iter = filter_tokens(iter_tokens(source))
         self.parse_header()
-        while self.peek()[0] != 'EOF':
-            self.parse_object()
+        while True:
+            try:
+                self.peek()
+            except StopIteration:
+                break
+            else:
+                self.parse_object()
 
     def peek(self, index=0):
         while len(self.buffer) <= index:
@@ -64,21 +97,21 @@ class Reader(object):
         else:
             token = next(self.token_iter)
 
-        if type_ and token[0] != type_:
-            self.buffer.insert(0, type_)
-            raise ValueError('%s is not %s' % (token[0], type_))
+        if type_ and token.type != type_:
+            self.buffer.insert(0, token)
+            raise ParseError('expected %s; got %s %r' % (type_, token.type, token.value), token)
 
         return token
 
     def get_word(self):
-        return self.next('WORD')[1]
+        return self.next('WORD').value
 
     def get_int(self):
-        return int(self.get_word())
+        return self.next('INTEGER').value
 
     def parse_header(self):
         magic = self.peek()
-        if magic == ('WORD', 'GTOa'):
+        if magic.type == 'WORD' and magic.value == 'GTOa':
             self.next()
             self.next('OPEN_PAREN')
             self.version = self.get_int()
@@ -104,7 +137,8 @@ class Reader(object):
             version = self.get_int()
             self.next('CLOSE_PAREN')
 
-        print 'OBJECT', name, protocol, version
+        obj = Object(name, protocol, version)
+        self.children[obj.name] = obj
 
         try:
             self.next('OPEN_BRACE')
@@ -112,10 +146,10 @@ class Reader(object):
             return
         else:
             while self.peek()[0] != 'CLOSE_BRACE':
-                self.parse_component()
+                self.parse_component(obj)
             self.next()
 
-    def parse_component(self):
+    def parse_component(self, parent):
 
         name = self.peek(0)[1]
         switch = self.peek(1)
@@ -128,13 +162,15 @@ class Reader(object):
 
         elif switch[0] != 'OPEN_BRACE':
 
-            self.parse_property()
+            self.parse_property(parent)
             return
 
         # Skip the brace.
         self.next()
 
-        print 'COMPONENT', name, interpretation
+        # print 'COMPONENT', name, interpretation
+        comp = Component(name, interpretation)
+        parent.children[comp.name] = comp
 
         try:
             self.next('OPEN_BRACE')
@@ -142,37 +178,67 @@ class Reader(object):
             return
         else:
             while self.peek()[0] != 'CLOSE_BRACE':
-                self.parse_component()
+                self.parse_component(comp)
             self.next()
 
     def get_type(self):
-
         base = self.get_word()
-        if base not in ('string'):
+        if base not in ('string', 'int', 'float'):
             raise ValueError('bad GTO type %r' % base)
 
-    def get_value(self):
+        sizes = []
+        try:
+            while True:
+                self.next('OPEN_BRACKET')
+                try:
+                    while True:
+                        sizes.append(self.get_int())
+                except ValueError:
+                    pass
+                self.next('CLOSE_BRACKET')
+
+        except ValueError:
+            pass
+
+        return base, sizes
+
+    def get_value(self, inner=False):
 
         token = self.next()
-        if token[0] == 'WORD':
-            token = ('INTEGER', int(token[1]))
 
-        if token[0] not in ('STRING', 'INTEGER'):
-            raise ValueError('bad value %r' % token)
+        if token.type in ('STRING', 'INTEGER', 'FLOAT',):
+            return token.value
 
-        return token
+        if inner and token.type == 'CLOSE_BRACKET':
+            return
+
+        if token.type == 'OPEN_BRACKET':
+            value = []
+            while True:
+                sub_v = self.get_value(True)
+                if sub_v is None:
+                    break
+                else:
+                    value.append(sub_v)
+            return value
+
+        raise ParseError('bad value %s %r' % (token.type, token.value), token)
 
 
-    def parse_property(self):
+    def parse_property(self, comp):
 
-        type_ = self.get_type()
+        type_, sizes = self.get_type()
         name = self.get_word()
 
         self.next('EQUALS')
 
         value = self.get_value()
 
-        print 'PROPERTY', type_, name, repr(value)
+        print 'PROPERTY', type_, sizes, name, repr(value)
+
+        prop = Property(name, value, type=type_)
+        comp.children[prop.name] = prop
+
 
 
 
@@ -197,16 +263,21 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-l', '--lex', action='store_true')
+    parser.add_argument('-f', '--filter', action='store_true')
     parser.add_argument('input', nargs='?')
     args = parser.parse_args()
 
     input_fh = open(args.input) if args.input else sys.stdin
 
     if args.lex:
-        for type_, value in iter_tokens(input_fh.read()):
-            print type_, repr(value)
+        tokens = iter_tokens(input_fh)
+        if args.filter:
+            tokens = filter_tokens(tokens)
+        for token in tokens:
+            print token
 
     else:
         parser = Reader()
-        parser.parse(input_fh.read())
+        parser.parse(input_fh)
+        parser.pprint()
 
