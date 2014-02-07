@@ -1,4 +1,5 @@
 import collections
+import itertools
 import re
 
 
@@ -91,13 +92,42 @@ def gto_type(value, base=None):
         return base
 
 
-class Object(object):
+class Base(collections.MutableMapping):
+    
+    def __init__(self, *args, **kwargs):
+        self._children = {}
+        for x in itertools.chain(args, [kwargs]):
+            self.update(x)
 
-    def __init__(self, name, protocol='object', version=0):
+    def __getitem__(self, key):
+        return self._children[key]
+
+    def __delitem__(self, key):
+        return self._children[key]
+
+    def __setitem__(self, key, value):
+
+        if isinstance(value, dict) and not isinstance(value, Base):
+            value = self._child_class(key, **value)
+        elif not isinstance(value, (Base, Property)):
+            value = Property(key, value)
+
+        self._children[key] = value
+
+    def __len__(self):
+        return len(self._children)
+
+    def __iter__(self):
+        return iter(self._children)
+
+
+class Object(Base):
+
+    def __init__(self, name, protocol='object', version=0, **kwargs):
+        super(Object, self).__init__(kwargs)
         self.name = name
         self.protocol = protocol
         self.version = version
-        self._children = {}
 
     def append(self, other):
         self._children[other.name] = other
@@ -117,12 +147,12 @@ class Object(object):
             yield indent + '}\n'
 
 
-class Component(object):
+class Component(Base):
 
-    def __init__(self, name, interpretation=None):
+    def __init__(self, name, interpretation=None, **kwargs):
+        super(Component, self).__init__(kwargs)
         self.name = name
         self.interpretation = interpretation
-        self._children = {}
 
     def append(self, other):
         self._children[other.name] = other
@@ -158,11 +188,11 @@ class Property(object):
         yield '\n'
 
 
-class GTO(object):
+class GTO(Base):
 
-    def __init__(self):
-        self.version = None
-        self._children = {}
+    def __init__(self, version=None, **kwargs):
+        super(GTO, self).__init__(kwargs)
+        self.version = version
         self._buffer = []
 
     def iter_dumps(self):
@@ -336,4 +366,11 @@ class GTO(object):
 
         prop = Property(name, value, type=type_)
         comp._children[prop.name] = prop
+
+
+
+Object._child_class = Component
+Component._child_class = Component
+GTO._child_class = Component
+
 
