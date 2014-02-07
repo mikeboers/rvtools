@@ -24,6 +24,14 @@ class TestGTOWriting(TestCase):
             }
         ''')
 
+    def test_empty_object(self):
+
+        gto = GTO(object={})
+        self.assertSimilarStrings(gto.dumps(), '''
+            object {
+            }
+        ''')
+
 
 class TestOldWriter(TestCase):
 
