@@ -14,7 +14,7 @@ def split_flags(name):
 
     flags = {}
 
-    flags_re = r'^(.+?)((?:_(?:%s))*)$' % '|'.join(flag_types)
+    flags_re = r'^(.*?)((?:_(?:%s))*)$' % '|'.join(flag_types)
     m = re.match(flags_re, name.lower())
 
     for flag in m.group(2).strip('_').split('_'):

@@ -25,12 +25,18 @@ class TestUtils(TestCase):
 			'grade': 'n',
 		})
 
+	def test_split_flags_case(self):
 		name, flags = split_flags('basename_n_MONO')
 		self.assertEqual(name, 'basename')
 		self.assertEqual(flags, {
 			'eye': 'mono',
 			'grade': 'n',
 		})
+
+	def test_split_flags_noname(self):
+		name, flags = split_flags('')
+		self.assertEqual(name, '')
+		self.assertEqual(flags, {})
 
 	def test_file_sequence(self):
 
