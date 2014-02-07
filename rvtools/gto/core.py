@@ -139,11 +139,11 @@ class Object(Base):
             yield ' : ' + gto_repr(self.protocol, True)
         if self.version:
             yield ' (%d)' % self.version
-        yield ' {\n'
+        yield '\n%s{\n' % indent
         for name, child in sorted(self._children.iteritems()):
             for x in child.iter_dumps(indent + '    '):
                 yield x
-        yield indent + '}\n'
+        yield '%s}\n\n' % indent
 
 
 class Component(Base):
@@ -159,11 +159,11 @@ class Component(Base):
         if self.interpretation:
             yield ' as '
             yield gto_repr(self.interpretation, True)
-        yield ' {\n'
+        yield '\n%s{\n' % indent
         for name, child in sorted(self._children.iteritems()):
             for x in child.iter_dumps(indent + '    '):
                 yield x
-        yield indent + '}\n'
+        yield '%s}\n\n' % indent
 
 
 class Property(object):
