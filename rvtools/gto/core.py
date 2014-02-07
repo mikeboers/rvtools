@@ -70,19 +70,19 @@ class Object(object):
     def append(self, other):
         self.children[other.name] = other
 
-    def pprint(self, indent=''):
-        print '%s%s%s%s%s' % (
-            indent,
-            self.name,
-            ' : ' + self.protocol if self.protocol != 'object' else '',
-            ' (%d)' % self.version if self.version else '',
-            ' {' if self.children else '',
-        )
-        for k, v in sorted(self.children.iteritems()):
-            v.pprint(indent + '    ')
+    def iter_dumps(self, indent=''):
+        yield indent
+        yield self.name
+        if self.protocol != 'object':
+            yield ' : ' + self.protocol
+        if self.version:
+            yield ' (%d)' % self.version
         if self.children:
-            print '%s}' % (indent, )
-
+            yield ' {\n'
+            for name, child in sorted(self.children.iteritems()):
+                for x in child.iter_dumps(indent + '    '):
+                    yield x
+            yield indent + '}\n'
 
 
 class Component(object):
@@ -95,11 +95,16 @@ class Component(object):
     def append(self, other):
         self.children[other.name] = other
 
-    def pprint(self, indent=''):
-        print '%s%s%s {' % (indent, self.name, ' as ' + self.interpretation if self.interpretation else '')
-        for k, v in sorted(self.children.iteritems()):
-            v.pprint(indent + '    ')
-        print '%s}' % (indent, )
+    def iter_dumps(self, indent=''):
+        yield indent
+        yield self.name
+        if self.interpretation:
+            yield ' as ' + self.interpretation
+        yield ' {\n'
+        for name, child in sorted(self.children.iteritems()):
+            for x in child.iter_dumps(indent + '    '):
+                yield x
+        yield indent + '}\n'
 
 
 class Property(object):
@@ -110,8 +115,8 @@ class Property(object):
         self.type = type or basetype
         self.interpretation = interpretation
 
-    def pprint(self, indent=''):
-        print '%s%s %s = %r' % (indent, self.type, self.name, self.value)
+    def iter_dumps(self, indent=''):
+        yield '%s%s %s = %r\n' % (indent, self.type, self.name, self.value)
 
 
 class GTO(object):
@@ -120,11 +125,15 @@ class GTO(object):
         self.buffer = []
         self.children = {}
 
-    def pprint(self):
+    def iter_dumps(self):
         if self.version:
-            print 'GTOa (%d)' % self.version
+            yield 'GTOa (%d)' % self.version
         for k, v in sorted(self.children.iteritems()):
-            v.pprint()
+            for x in v.iter_dumps():
+                yield x
+
+    def dumps(self):
+        return ''.join(self.iter_dumps())
 
     def parse(self, source):
         self.token_iter = filter_tokens(iter_tokens(source))
@@ -220,7 +229,6 @@ class GTO(object):
         # Skip the brace.
         self.next()
 
-        # print 'COMPONENT', name, interpretation
         comp = Component(name, interpretation)
         parent.children[comp.name] = comp
 
@@ -285,8 +293,6 @@ class GTO(object):
         self.next('EQUALS')
 
         value = self.get_value()
-
-        print 'PROPERTY', type_, sizes, name, repr(value)
 
         prop = Property(name, value, type=type_)
         comp.children[prop.name] = prop

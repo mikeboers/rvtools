@@ -22,5 +22,5 @@ if args.lex:
 else:
     gto = GTO()
     gto.parse(input_fh)
-    gto.pprint()
+    print gto.dumps()
 
