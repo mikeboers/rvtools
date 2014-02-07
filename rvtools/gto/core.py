@@ -97,10 +97,10 @@ class Object(object):
         self.name = name
         self.protocol = protocol
         self.version = version
-        self.children = {}
+        self._children = {}
 
     def append(self, other):
-        self.children[other.name] = other
+        self._children[other.name] = other
 
     def iter_dumps(self, indent=''):
         yield indent
@@ -109,9 +109,9 @@ class Object(object):
             yield ' : ' + gto_repr(self.protocol, True)
         if self.version:
             yield ' (%d)' % self.version
-        if self.children:
+        if self._children:
             yield ' {\n'
-            for name, child in sorted(self.children.iteritems()):
+            for name, child in sorted(self._children.iteritems()):
                 for x in child.iter_dumps(indent + '    '):
                     yield x
             yield indent + '}\n'
@@ -122,10 +122,10 @@ class Component(object):
     def __init__(self, name, interpretation=None):
         self.name = name
         self.interpretation = interpretation
-        self.children = {}
+        self._children = {}
 
     def append(self, other):
-        self.children[other.name] = other
+        self._children[other.name] = other
 
     def iter_dumps(self, indent=''):
         yield indent
@@ -134,7 +134,7 @@ class Component(object):
             yield ' as '
             yield gto_repr(self.interpretation, True)
         yield ' {\n'
-        for name, child in sorted(self.children.iteritems()):
+        for name, child in sorted(self._children.iteritems()):
             for x in child.iter_dumps(indent + '    '):
                 yield x
         yield indent + '}\n'
@@ -161,13 +161,14 @@ class Property(object):
 class GTO(object):
 
     def __init__(self):
-        self.buffer = []
-        self.children = {}
+        self.version = None
+        self._children = {}
+        self._buffer = []
 
     def iter_dumps(self):
         if self.version:
             yield 'GTOa (%d)\n' % self.version
-        for k, v in sorted(self.children.iteritems()):
+        for k, v in sorted(self._children.iteritems()):
             for x in v.iter_dumps():
                 yield x
 
@@ -175,135 +176,135 @@ class GTO(object):
         return ''.join(self.iter_dumps())
 
     def parse(self, source):
-        self.token_iter = filter_tokens(iter_tokens(source))
-        self.parse_header()
+        self._token_iter = filter_tokens(iter_tokens(source))
+        self._parse_header()
         while True:
             try:
-                self.peek()
+                self._peek()
             except StopIteration:
                 break
             else:
-                self.parse_object()
+                self._parse_object()
 
-    def peek(self, index=0):
-        while len(self.buffer) <= index:
-            self.buffer.append(next(self.token_iter))
-        return self.buffer[index]
+    def _peek(self, index=0):
+        while len(self._buffer) <= index:
+            self._buffer.append(next(self._token_iter))
+        return self._buffer[index]
 
-    def next(self, type_=None):
+    def _next(self, type_=None):
 
-        if self.buffer:
-            token = self.buffer.pop(0)
+        if self._buffer:
+            token = self._buffer.pop(0)
         else:
-            token = next(self.token_iter)
+            token = next(self._token_iter)
 
         if type_ and token.type != type_:
-            self.buffer.insert(0, token)
+            self._buffer.insert(0, token)
             raise ParseError('expected %s; got %s %r' % (type_, token.type, token.value), token)
 
         return token
 
-    def get_word(self):
-        return self.next('WORD').value
+    def _get_word(self):
+        return self._next('WORD').value
 
-    def get_int(self):
-        return self.next('INTEGER').value
+    def _get_int(self):
+        return self._next('INTEGER').value
 
-    def parse_header(self):
-        magic = self.peek()
+    def _parse_header(self):
+        magic = self._peek()
         if magic.type == 'WORD' and magic.value == 'GTOa':
-            self.next()
-            self.next('OPEN_PAREN')
-            self.version = self.get_int()
-            self.next('CLOSE_PAREN')
+            self._next()
+            self._next('OPEN_PAREN')
+            self.version = self._get_int()
+            self._next('CLOSE_PAREN')
         else:
             self.version = None
 
-    def parse_object(self):
+    def _parse_object(self):
 
-        name = self.get_word()
+        name = self._get_word()
         try:
-            self.next('COLON')
+            self._next('COLON')
         except ValueError:
             protocol = 'object'
         else:
-            protocol = self.get_word()
+            protocol = self._get_word()
 
         try:
-            self.next('OPEN_PAREN')
+            self._next('OPEN_PAREN')
         except ValueError:
             version = 0
         else:
-            version = self.get_int()
-            self.next('CLOSE_PAREN')
+            version = self._get_int()
+            self._next('CLOSE_PAREN')
 
         obj = Object(name, protocol, version)
-        self.children[obj.name] = obj
+        self._children[obj.name] = obj
 
         try:
-            self.next('OPEN_BRACE')
+            self._next('OPEN_BRACE')
         except ValueError:
             return
         else:
-            while self.peek()[0] != 'CLOSE_BRACE':
-                self.parse_component(obj)
-            self.next()
+            while self._peek()[0] != 'CLOSE_BRACE':
+                self._parse_component(obj)
+            self._next()
 
-    def parse_component(self, parent):
+    def _parse_component(self, parent):
 
-        name = self.peek(0)[1]
-        switch = self.peek(1)
+        name = self._peek(0)[1]
+        switch = self._peek(1)
         interpretation = None
 
         if switch == ('WORD', 'as'):
-            self.next() # Skip name
-            self.next() # Skip "as"
-            interpretation = self.get_word()
+            self._next() # Skip name
+            self._next() # Skip "as"
+            interpretation = self._get_word()
 
         elif switch[0] != 'OPEN_BRACE':
 
-            self.parse_property(parent)
+            self._parse_property(parent)
             return
 
         # Skip the brace.
-        self.next()
+        self._next()
 
         comp = Component(name, interpretation)
-        parent.children[comp.name] = comp
+        parent._children[comp.name] = comp
 
         try:
-            self.next('OPEN_BRACE')
+            self._next('OPEN_BRACE')
         except ValueError:
             return
         else:
-            while self.peek()[0] != 'CLOSE_BRACE':
-                self.parse_component(comp)
-            self.next()
+            while self._peek()[0] != 'CLOSE_BRACE':
+                self._parse_component(comp)
+            self._next()
 
-    def get_type(self):
-        base = self.get_word()
+    def _get_type(self):
+        base = self._get_word()
         if base not in ('string', 'int', 'float'):
             raise ValueError('bad GTO type %r' % base)
 
         sizes = []
         try:
             while True:
-                self.next('OPEN_BRACKET')
+                self._next('OPEN_BRACKET')
                 try:
                     while True:
-                        sizes.append(self.get_int())
+                        sizes.append(self._get_int())
                 except ValueError:
                     pass
-                self.next('CLOSE_BRACKET')
+                self._next('CLOSE_BRACKET')
 
         except ValueError:
             pass
 
         return base, sizes
 
-    def get_value(self, inner=False):
+    def _get_value(self, inner=False):
 
-        token = self.next()
+        token = self._next()
 
         if token.type in ('STRING', 'INTEGER', 'FLOAT',):
             return token.value
@@ -314,7 +315,7 @@ class GTO(object):
         if token.type == 'OPEN_BRACKET':
             value = []
             while True:
-                sub_v = self.get_value(True)
+                sub_v = self._get_value(True)
                 if sub_v is None:
                     break
                 else:
@@ -324,15 +325,15 @@ class GTO(object):
         raise ParseError('bad value %s %r' % (token.type, token.value), token)
 
 
-    def parse_property(self, comp):
+    def _parse_property(self, comp):
 
-        type_, sizes = self.get_type()
-        name = self.get_word()
+        type_, sizes = self._get_type()
+        name = self._get_word()
 
-        self.next('EQUALS')
+        self._next('EQUALS')
 
-        value = self.get_value()
+        value = self._get_value()
 
         prop = Property(name, value, type=type_)
-        comp.children[prop.name] = prop
+        comp._children[prop.name] = prop
 
