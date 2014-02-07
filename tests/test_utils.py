@@ -25,6 +25,13 @@ class TestUtils(TestCase):
 			'grade': 'n',
 		})
 
+		name, flags = split_flags('basename_n_MONO')
+		self.assertEqual(name, 'basename')
+		self.assertEqual(flags, {
+			'eye': 'mono',
+			'grade': 'n',
+		})
+
 	def test_file_sequence(self):
 
 		seq = FileSequence('/path/to/tb_0780_v0012_mono.[1008-1160].dpx (153)')
