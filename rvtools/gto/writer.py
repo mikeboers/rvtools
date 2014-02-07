@@ -20,7 +20,12 @@ class Writer(object):
         self.fh.write('%s%s\n' % ('\t' * self._indent, line))
 
     def begin_object(self, name, protocol='object', version=0):
-        self.writeline('%s : %s (%d)' % (gto_repr(name), protocol, version))
+        name = gto_repr(name, True)
+        if protocol != 'object':
+            name = '%s: %s' % (name, protocol)
+        if version:
+            name = '%s (%d)' % (name, version)
+        self.writeline(name)
         self.writeline('{')
         self.indent()
 
@@ -38,9 +43,9 @@ class Writer(object):
 
     def begin_component(self, name, interpretation=None):
         if interpretation:
-            line = '%s as %s' % (gto_repr(name), gto_repr(interpretation))
+            line = '%s as %s' % (gto_repr(name, True), gto_repr(interpretation))
         else:
-            line = gto_repr(name)
+            line = gto_repr(name, True)
         self.writeline(line)
         self.writeline('{')
         self.indent()
@@ -59,9 +64,9 @@ class Writer(object):
 
         type = type or gto_type(value, basetype)
         if interpretation:
-            line = '%s %s as %s = %s' % (type, gto_repr(name), interpretation, gto_repr(value))
+            line = '%s %s as %s = %s' % (type, gto_repr(name, True), interpretation, gto_repr(value))
         else:
-            line = '%s %s = %s' % (type, gto_repr(name), gto_repr(value))
+            line = '%s %s = %s' % (type, gto_repr(name, True), gto_repr(value))
 
         self.writeline(line)
 
