@@ -22,7 +22,7 @@ class Writer(object):
     def begin_object(self, name, protocol='object', version=0):
         name = gto_repr(name, True)
         if protocol != 'object':
-            name = '%s: %s' % (name, protocol)
+            name = '%s : %s' % (name, protocol)
         if version:
             name = '%s (%d)' % (name, version)
         self.writeline(name)

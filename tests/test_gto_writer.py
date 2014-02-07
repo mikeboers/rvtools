@@ -2,7 +2,7 @@ from cStringIO import StringIO
 
 from . import *
 
-from rvtools.gto import GTO
+from rvtools.gto import GTO, Object
 from rvtools.gto.writer import Writer
 
 
@@ -32,18 +32,20 @@ class TestOldWriter(TestCase):
         fh = StringIO()
         gto = Writer(fh)
 
-        with gto.object('Object'):
+        with gto.object('Object', 'Protocol', 1):
             with gto.component('Component'):
                 gto.property('float_prop', 3.14)
                 gto.property('int_array_prop', [[1, 2, 3, 4]])
+                gto.property('string_array_prop', [['a', 'b'], ['c', 'd']])
                 gto.property('string_prop', "hello")
 
         self.assertSimilarStrings(fh.getvalue(), '''
             GTOa (3)
-            Object {
+            Object : Protocol (1) {
                 Component {
                     float float_prop = 3.14
                     int[4] int_array_prop = [ [ 1 2 3 4 ] ]
+                    string[2] string_array_prop = [ [ "a" "b" ] [ "c" "d" ] ]
                     string string_prop = "hello"
                 }
             }
@@ -51,20 +53,23 @@ class TestOldWriter(TestCase):
 
     def test_new(self):
 
-        gto = GTO(3, Object=dict(
+        gto = GTO(3)
+        gto.add(Object('Object', 'Protocol', 1,
             Component=dict(
                 string_prop='hello',
                 float_prop=3.14,
                 int_array_prop=[[1, 2, 3, 4]],
+                string_array_prop=[['a', 'b'], ['c', 'd']],
             )
         ))
 
         self.assertSimilarStrings(gto.dumps(), '''
             GTOa (3)
-            Object {
+            Object : Protocol (1) {
                 Component {
                     float float_prop = 3.14
                     int[4] int_array_prop = [ [ 1 2 3 4 ] ]
+                    string[2] string_array_prop = [ [ "a" "b" ] [ "c" "d" ] ]
                     string string_prop = "hello"
                 }
             }

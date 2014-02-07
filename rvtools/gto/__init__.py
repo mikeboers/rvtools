@@ -1,1 +1,2 @@
-from .core import GTO
+from .core import GTO, Object
+

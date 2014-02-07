@@ -120,6 +120,9 @@ class Base(collections.MutableMapping):
     def __iter__(self):
         return iter(self._children)
 
+    def add(self, other):
+        self._children[other.name] = other
+
 
 class Object(Base):
 
@@ -128,9 +131,6 @@ class Object(Base):
         self.name = name
         self.protocol = protocol
         self.version = version
-
-    def append(self, other):
-        self._children[other.name] = other
 
     def iter_dumps(self, indent=''):
         yield indent
@@ -153,9 +153,6 @@ class Component(Base):
         super(Component, self).__init__(kwargs)
         self.name = name
         self.interpretation = interpretation
-
-    def append(self, other):
-        self._children[other.name] = other
 
     def iter_dumps(self, indent=''):
         yield indent
