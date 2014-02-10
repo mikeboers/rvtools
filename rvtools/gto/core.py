@@ -140,10 +140,12 @@ class Object(Base):
         if self.version:
             yield ' (%d)' % self.version
         yield '\n%s{\n' % indent
-        for name, child in sorted(self._children.iteritems()):
+        for i, (name, child) in enumerate(sorted(self._children.iteritems())):
+            if i:
+                yield '\n'
             for x in child.iter_dumps(indent + '    '):
                 yield x
-        yield '%s}\n\n' % indent
+        yield '%s}\n' % indent
 
 
 class Component(Base):
@@ -163,7 +165,7 @@ class Component(Base):
         for name, child in sorted(self._children.iteritems()):
             for x in child.iter_dumps(indent + '    '):
                 yield x
-        yield '%s}\n\n' % indent
+        yield '%s}\n' % indent
 
 
 class Property(object):
@@ -194,7 +196,9 @@ class GTO(Base):
     def iter_dumps(self):
         if self.version:
             yield 'GTOa (%d)\n' % self.version
-        for k, v in sorted(self._children.iteritems()):
+        for i, (k, v) in enumerate(sorted(self._children.iteritems())):
+            if self.version or i:
+                yield '\n'
             for x in v.iter_dumps():
                 yield x
 
