@@ -23,6 +23,7 @@ setup(
             rvtools-wheel = rvtools.commands.wheel:main
             rvtools-build = rvtools.commands.build:main
             rvtools-install = rvtools.commands.install:main
+            rvpkg2 = rvtools.package:main
     '''),
 
     scripts=[
