@@ -13,6 +13,18 @@ setup(
     author_email='rvtools@mikeboers.com',
     license='BSD-3',
 
+    install_requires='''
+        PyYAML
+        wheel
+    ''',
+
+    entry_points=dict(
+        console_scripts='''
+            rvtools-wheel = rvtools.commands.wheel:main
+            rvtools-build = rvtools.commands.build:main
+            rvtools-install = rvtools.commands.install:main
+    '''),
+
     scripts=[
         'scripts/rv_session_from_csv',
     ],

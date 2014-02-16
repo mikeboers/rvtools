@@ -1,3 +1,4 @@
+import errno
 import os
 import re
 
@@ -93,4 +94,21 @@ def parse_ld_tree_output(fh):
         yield seq
 
 
+def mkdir(path):
+    try:
+        os.makedirs(path)
+    except OSError as e:
+        if e.errno != errno.EEXIST:
+            raise
+
+
+class cached_property(object):
+
+    def __init__(self, func):
+        self.func = func
+
+    def __get__(self, obj, type=None):
+        v = self.func(obj)
+        obj.__dict__[self.func.__name__] = v
+        return v
 
