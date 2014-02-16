@@ -1,5 +1,8 @@
+from __future__ import print_function
+
 import collections
 import os
+import sys
 import zipfile
 from subprocess import check_output
 
@@ -50,47 +53,71 @@ def iter_installed(env):
         yield path, install.installed, meta
 
 
+def error(x):
+    print('%s: %s', file=sys.stderr)
+
+
+def confirm(msg, args):
+    msg = '%s [Yn]:' % msg
+    print(msg, endl=' ')
+    return args.yes or raw_input().lower().startswith('y')
+
+
 def main():
 
     import argparse
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('-E', '--list-envs', action='store_true')
-    parser.add_argument('-l', '--list', action='store_true')
+    parser.add_argument('-E', '--list-envs', action='store_true', help='list all support areas')
+    parser.add_argument('-l', '--list', action='store_true', help='list all packages')
 
-    parser.add_argument('-a', '--add', action='store_true')
-    parser.add_argument('-r', '--remove', action='store_true')
+    parser.add_argument('-c', '--copy', action='store_true', help='copy package to support area')
+    parser.add_argument('-r', '--remove', action='store_true', help='remove package from support area')
 
-    parser.add_argument('-i', '--install', action='store_true')
-    parser.add_argument('-u', '--uninstall', action='store_true')
+    parser.add_argument('-i', '--install', action='store_true', help='install package')
+    parser.add_argument('-u', '--uninstall', action='store_true', help='uninstall package')
 
-    parser.add_argument('-f', '--force', action='store_true')
+    parser.add_argument('-y', '--yes', action='store_true', help='respond "yes" to all questions')
 
-    parser.add_argument('-e', '--env')
+    parser.add_argument('-e', '--env', help='use this support area; defaults to first')
     parser.add_argument('package', nargs='*')
 
     args = parser.parse_args()
 
+
+    command_count = (
+        int(args.copy or args.install) +
+        int(args.remove or args.uninstall) + 
+        int(args.list) + 
+        int(args.list_envs)
+    )
+    if command_count != 1:
+        parser.print_usage()
+        exit(1)
+
     if args.list_envs:
         for env in get_envs():
-            print env
+            print(env)
         return
 
     if args.list:
         pkgs = []
-        for env in get_envs():
+        for env in [args.env] if args.env else get_envs():
             pkgs.extend(iter_installed(env))
         pkgs.sort(key=lambda (p, i, m): (m['package'], i, p))
 
         for path, installed, meta in pkgs:
-            print '%s "%s" v%s: %s' % (
+            print('%s "%s" v%s: %s' % (
                 '*' if installed else ' ',
                 meta['package'],
                 meta['version'],
                 path,
-            )
+            ))
         return
+
+    if not args.package:
+        parser.error('package is required')
 
     for pkg in args.package:
         process_one(pkg, args)
@@ -98,7 +125,24 @@ def main():
 
 def process_one(package, args):
 
-    print package
+    env = args.env or get_envs()[0]
+    if not os.path.exists(env):
+        if confirm('create env %s?' % env):
+            os.makedirs(env)
+        else:
+            error('env does not exist')
+
+    if args.copy:
+        if not os.path.exists(package):
+            error('package does not exist: %s' % package)
+            return
+        if not os.path.splitext(package)[1] in ('.zip', '.rvpkg'):
+            error('package has wrong extension: %s' % os.pth.splitext(package)[1])
+            return
+
+        # TODO: make sure it doesn't exist, or offer to remove it
+        # TODO: copy it in
+
 
 
 
