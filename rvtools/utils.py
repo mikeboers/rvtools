@@ -8,6 +8,8 @@ flag_types = {
     'left': 'eye',
     'right': 'eye',
     'n': 'grade',
+    '2k': 'resolution',
+    '4k': 'resolution',
 }
 
 
