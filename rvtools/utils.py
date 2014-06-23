@@ -78,6 +78,9 @@ class FileSequence(object):
             return self.pattern.format(self.start)
         else:
             return self.expr
+    
+    def ith_frame(self, index):
+        return self.pattern.format((self.start or 0) + index)
 
 
 def parse_ld_tree_output(fh):
