@@ -39,7 +39,7 @@ class FileSequence(object):
         if not m:
             self.start = self.end = self.frame_count = None
             self.expr = self.pattern = line
-            self.suffix = os.path.splitext(self.expr)[1]
+            self.prefix, self.suffix = os.path.splitext(self.expr)
 
         else:
 

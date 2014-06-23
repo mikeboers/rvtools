@@ -45,6 +45,7 @@ class TestUtils(TestCase):
 		self.assertEqual(seq.end, 1160)
 		self.assertEqual(seq.frame_count, 153)
 		self.assertEqual(seq.full_name, 'tb_0780_v0012_mono')
+		self.assertEqual(seq.prefix, '/path/to/tb_0780_v0012_mono.')
 		self.assertEqual(seq.suffix, '.dpx')
 		self.assertEqual(seq.name, 'tb_0780_v0012')
 		self.assertEqual(seq.eye, 'mono')
@@ -63,6 +64,7 @@ class TestUtils(TestCase):
 		self.assertEqual(seq.end, None)
 		self.assertEqual(seq.frame_count, None)
 		self.assertEqual(seq.full_name, 'tb_0780_v0012_mono')
+		self.assertEqual(seq.prefix, '/path/to/tb_0780_v0012_mono') # Note that this is a little different!
 		self.assertEqual(seq.suffix, '.mov')
 		self.assertEqual(seq.name, 'tb_0780_v0012')
 		self.assertEqual(seq.eye, 'mono')
