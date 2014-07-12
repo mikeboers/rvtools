@@ -120,8 +120,11 @@ class Base(collections.MutableMapping):
     def __iter__(self):
         return iter(self._children)
 
-    def add(self, other):
-        self._children[other.name] = other
+    def add(self, obj, *args, **kwargs):
+        if not isinstance(obj, (Base, Property)):
+            obj = self._child_class(obj, *args, **kwargs)
+        self._children[obj.name] = obj
+        return obj
 
 
 class Object(Base):
@@ -371,6 +374,6 @@ class GTO(Base):
 
 Object._child_class = Component
 Component._child_class = Component
-GTO._child_class = Component
+GTO._child_class = Object
 
 

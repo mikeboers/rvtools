@@ -1,3 +1,10 @@
+"""DEPRECATED.
+
+This is the first API for writing GTO files, and should no longer be used.
+Try :module:`rvtools.gto.core` instead.
+
+"""
+
 import contextlib
 
 from .core import GTO, Object, Component, Property

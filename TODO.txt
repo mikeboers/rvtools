@@ -1,0 +1,12 @@
+
+- Start "Session" API to provide domain functionality, e.g.:
+    - "connections" object could work with object references instead of names
+    - per-node-type classes, e.g. RVColor, would have known version numbers
+    - dot-style property setting:
+        obj['lut.active'] = 1
+        obj['lut.file'] = '/path/to/lut.cube'
+    - other methods to match the Mu api (including "$" and "#" searching)
+
+- dot representation
+
+

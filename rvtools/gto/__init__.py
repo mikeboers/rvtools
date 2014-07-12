@@ -1,2 +1,1 @@
-from .core import GTO, Object
-
+from .core import GTO, Object, Component, Property

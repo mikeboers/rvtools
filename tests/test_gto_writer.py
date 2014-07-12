@@ -32,6 +32,27 @@ class TestGTOWriting(TestCase):
             }
         ''')
 
+    def test_quick_constructor(self):
+        gto = GTO(3)
+        gto.add('sourceGroup000000_colour_0', 'RVColor', 2, **{
+            'lut': {
+                'file': '/path/to/lut.cube',
+                'active': 1,
+            },
+        })
+        self.assertSimilarStrings(gto.dumps(), '''
+            GTOa (3)
+
+            sourceGroup000000_colour_0 : RVColor (2)
+            {
+                lut
+                {
+                    int active = 1
+                    string file = "/path/to/lut.cube"
+                }
+            }
+        ''')
+
 
 class TestOldWriter(TestCase):
 
