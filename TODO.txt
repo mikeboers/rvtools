@@ -1,6 +1,8 @@
 
 - Start "Session" API to provide domain functionality, e.g.:
     - "connections" object could work with object references instead of names
+    - a source_groups list, where each SourceGroup has a linear_pipeline, colour_pipeline,
+      look_pipeline, etc. (as PipelineGroup object, or something).
     - per-node-type classes, e.g. RVColor, would have known version numbers
     - dot-style property setting:
         obj['lut.active'] = 1
